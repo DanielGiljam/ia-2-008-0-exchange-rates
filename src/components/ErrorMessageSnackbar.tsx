@@ -17,7 +17,10 @@ const ErrorMessageSnackbar = ({
   isShown,
   onHide,
 }: ErrorMessageSnackbarProps): JSX.Element => {
-  const close = (event: SyntheticEvent<Element, Event>, reason?: string): void => {
+  const close = (
+    event: SyntheticEvent<Element, Event>,
+    reason?: string,
+  ): void => {
     if (reason === "clickaway") return
     onHide()
   }
