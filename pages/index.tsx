@@ -1,6 +1,6 @@
 import {ReactNode, useEffect, useRef, useState} from "react"
 
-import {GetStaticProps} from "next"
+import {useRouter} from "next/router"
 
 import Button from "@material-ui/core/Button"
 import Chip from "@material-ui/core/Chip"
@@ -28,30 +28,6 @@ import moment from "moment"
 
 import AutocompleteWithVirtualization from "../src/components/AutocompleteWithVirtualization"
 import {Coin} from "../src/types/cryptocompare"
-
-const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
-
-export const getStaticProps: GetStaticProps = async () => {
-  const coinlist = await fetch(coinlistURL)
-    .then((req) => req.json())
-    .then((data) =>
-      Object.values(data.Data)
-        .map(({Name, CoinName}) => ({
-          Name,
-          CoinName: CoinName.trim(),
-        }))
-        .sort((a, b) =>
-          a.CoinName.replace(/^\W+/, "").localeCompare(
-            b.CoinName.replace(/^\W+/, ""),
-          ),
-        ),
-    )
-    .catch((error) => {
-      console.error(error)
-      return []
-    })
-  return {props: {coinlist}}
-}
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -90,6 +66,25 @@ const getDateRangeValidationErrorMessage = (
   }
 }
 
+const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
+
+const fetchCoinlist = (): Promise<Coin[]> => {
+  return fetch(coinlistURL)
+    .then((req) => req.json())
+    .then((data) =>
+      Object.values(data.Data)
+        .map(({CoinName, ...coin}: Coin) => ({
+          CoinName: CoinName.trim(),
+          ...coin,
+        }))
+        .sort((a, b) =>
+          a.CoinName.replace(/^\W+/, "").localeCompare(
+            b.CoinName.replace(/^\W+/, ""),
+          ),
+        ),
+    )
+}
+
 const filterOptions = createFilterOptions({
   stringify: ({Name, CoinName}) => `${Name} ${CoinName}`,
 })
@@ -114,14 +109,9 @@ const blurAutocompleteInput = (
 
 type GraphType = "boxplot" | "linechart"
 
-interface IndexProps {
-  coinlist: Coin[];
-}
-
-// TODO: fetch coinlist client-side
-// TODO: finish submitForm function
-const Index = ({coinlist}: IndexProps): JSX.Element => {
+const Index = (): JSX.Element => {
   const styles = useStyles()
+  const router = useRouter()
   const [dateRange, setDateRange] = useState<DateRange>([
     yesterday.clone().subtract(1, "month"),
     yesterday,
@@ -130,9 +120,11 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
     DateRangeValidationError
   >([null, null])
   const [dateRangeError, setDateRangeError] = useState([false, false])
+  const [coinlist, setCoinlist] = useState<Coin[]>([])
   const [coins, setCoins] = useState([])
   const [coinsError, setCoinsError] = useState(false)
-  const [graphType, setGraphType] = useState<GraphType>("bollinger-bands")
+  const [coinsLoadingError, setCoinsLoadingError] = useState(false)
+  const [graphType, setGraphType] = useState<GraphType>("boxplot")
   const form = useRef<HTMLFormElement>(null)
   const autocomplete = useRef<HTMLDivElement>(null)
   const autocompleteInput = useRef<HTMLInputElement>(null)
@@ -144,8 +136,33 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
       setDateRangeError((prevState) => [prevState[0], true])
     }
     if (!coins.length) setCoinsError(true)
+    if (
+      dateRange.every((date) => date) &&
+      dateRangeValidationError.every((error) => !error) &&
+      coins.length
+    ) {
+      router.push(
+        {
+          pathname: "/",
+          query: {
+            graphtype: graphType,
+            from: dateRange[0].format("YYYY-MM-DD"),
+            to: dateRange[1].format("YYYY-MM-DD"),
+            coin: coins.map(({Id}) => Id),
+          },
+        },
+        undefined,
+        {shallow: true},
+      )
+    }
   }
   useEffect(() => {
+    fetchCoinlist()
+      .then(setCoinlist)
+      .catch((error) => {
+        console.error(error)
+        setCoinsLoadingError(true)
+      })
     setAutocompleteWidth(form.current, autocomplete.current)
     window.addEventListener("resize", () =>
       setAutocompleteWidth(form.current, autocomplete.current),
@@ -220,6 +237,12 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
         filterOptions={filterOptions}
         getOptionLabel={({CoinName}): string => CoinName}
         id={"coins"}
+        loading={!coinlist.length}
+        loadingText={
+          coinsLoadingError
+            ? "Encountered an error while trying to load the coinlist. See the console for more information."
+            : undefined
+        }
         options={coinlist}
         renderInput={(params): JSX.Element => (
           <TextField
