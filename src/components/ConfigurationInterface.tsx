@@ -1,6 +1,6 @@
 import {ReactNode, useEffect, useRef, useState} from "react"
 
-import {useRouter} from "next/router"
+import Router from "next/router"
 
 import Button from "@material-ui/core/Button"
 import Chip from "@material-ui/core/Chip"
@@ -102,7 +102,6 @@ const ConfigurationInterface = ({
   config,
 }: ConfigurationInterfaceProps): JSX.Element => {
   const styles = useStyles()
-  const router = useRouter()
   const [dateRange, setDateRange] = useState<DateRange>([
     config?.from || yesterday.clone().subtract(1, "month"),
     config?.to || yesterday,
@@ -132,13 +131,13 @@ const ConfigurationInterface = ({
       dateRangeValidationError.every((error) => !error) &&
       coins.length
     ) {
-      router.push(
+      Router.push(
         {
           pathname: "/",
           query: {
             graphtype: graphType,
-            from: dateRange[0].format("YYYY-MM-DD"),
-            to: dateRange[1].format("YYYY-MM-DD"),
+            from: dateRange[0].format(moment.HTML5_FMT.DATE),
+            to: dateRange[1].format(moment.HTML5_FMT.DATE),
             coin: coins.map(({Id}) => Id),
           },
         },
@@ -169,7 +168,7 @@ const ConfigurationInterface = ({
     <form ref={form} className={styles.form}>
       <DateRangePicker
         endText={"To"}
-        inputFormat={"YYYY-MM-DD"}
+        inputFormat={moment.HTML5_FMT.DATE}
         mask={"____-__-__"}
         maxDate={yesterday}
         renderInput={(
