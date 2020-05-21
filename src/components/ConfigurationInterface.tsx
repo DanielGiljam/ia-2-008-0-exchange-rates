@@ -23,11 +23,10 @@ import {
 
 import {Theme, createStyles, makeStyles} from "@material-ui/core/styles"
 
-import unfetch from "isomorphic-unfetch"
-
 import {DateRangeValidationError} from "@material-ui/pickers/src/_helpers/date-utils"
 import moment from "moment"
 
+import {Config, GraphType} from "../../pages"
 import {Coin} from "../types/cryptocompare"
 
 import AutocompleteWithVirtualization from "./AutocompleteWithVirtualization"
@@ -69,25 +68,6 @@ const getDateRangeValidationErrorMessage = (
   }
 }
 
-const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
-
-const fetchCoinlist = (): Promise<Coin[]> => {
-  return unfetch(coinlistURL)
-    .then((req) => req.json())
-    .then((data) =>
-      Object.values(data.Data)
-        .map(({CoinName, ...coin}: Coin) => ({
-          CoinName: CoinName.trim(),
-          ...coin,
-        }))
-        .sort((a, b) =>
-          a.CoinName.replace(/^\W+/, "").localeCompare(
-            b.CoinName.replace(/^\W+/, ""),
-          ),
-        ),
-    )
-}
-
 const filterOptions = createFilterOptions({
   stringify: ({Name, CoinName}) => `${Name} ${CoinName}`,
 })
@@ -110,24 +90,32 @@ const blurAutocompleteInput = (
   }
 }
 
-type GraphType = "boxplot" | "linechart"
+interface ConfigurationInterfaceProps {
+  coinlist: Coin[];
+  coinlistLoadingError: boolean;
+  config: Config;
+}
 
-const ConfigurationInterface = (): JSX.Element => {
+const ConfigurationInterface = ({
+  coinlist,
+  coinlistLoadingError,
+  config,
+}: ConfigurationInterfaceProps): JSX.Element => {
   const styles = useStyles()
   const router = useRouter()
   const [dateRange, setDateRange] = useState<DateRange>([
-    yesterday.clone().subtract(1, "month"),
-    yesterday,
+    config?.from || yesterday.clone().subtract(1, "month"),
+    config?.to || yesterday,
   ])
   const [dateRangeValidationError, setDateRangeValidationError] = useState<
     DateRangeValidationError
   >([null, null])
   const [dateRangeError, setDateRangeError] = useState([false, false])
-  const [coinlist, setCoinlist] = useState<Coin[]>([])
-  const [coins, setCoins] = useState([])
+  const [coins, setCoins] = useState(config?.coins || [])
   const [coinsError, setCoinsError] = useState(false)
-  const [coinsLoadingError, setCoinsLoadingError] = useState(false)
-  const [graphType, setGraphType] = useState<GraphType>("boxplot")
+  const [graphType, setGraphType] = useState<GraphType>(
+    config?.graphType || "boxplot",
+  )
   const form = useRef<HTMLFormElement>(null)
   const autocomplete = useRef<HTMLDivElement>(null)
   const autocompleteInput = useRef<HTMLInputElement>(null)
@@ -160,12 +148,6 @@ const ConfigurationInterface = (): JSX.Element => {
     }
   }
   useEffect(() => {
-    fetchCoinlist()
-      .then(setCoinlist)
-      .catch((error) => {
-        console.error(error)
-        setCoinsLoadingError(true)
-      })
     setAutocompleteWidth(form.current, autocomplete.current)
     window.addEventListener("resize", () =>
       setAutocompleteWidth(form.current, autocomplete.current),
@@ -176,6 +158,13 @@ const ConfigurationInterface = (): JSX.Element => {
       )
     }
   }, [])
+  useEffect(() => {
+    if (config) {
+      setDateRange([config.from, config.to])
+      setCoins(config.coins)
+      setGraphType(config.graphType)
+    }
+  }, [config])
   return (
     <form ref={form} className={styles.form}>
       <DateRangePicker
@@ -242,7 +231,7 @@ const ConfigurationInterface = (): JSX.Element => {
         id={"coins"}
         loading={!coinlist.length}
         loadingText={
-          coinsLoadingError
+          coinlistLoadingError
             ? "Encountered an error while trying to load the coinlist. See the console for more information."
             : undefined
         }
