@@ -112,7 +112,7 @@ const blurAutocompleteInput = (
   }
 }
 
-type GraphType = "bollinger-bands" | "line-chart"
+type GraphType = "boxplot" | "linechart"
 
 interface IndexProps {
   coinlist: Coin[];
@@ -212,8 +212,8 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
         startText={"From"}
         value={dateRange}
         disableHighlightToday
-        onChange={(date): void => setDateRange(date)}
-        onError={(reason): void => setDateRangeValidationError(reason)}
+        onChange={setDateRange}
+        onError={setDateRangeValidationError}
       />
       <AutocompleteWithVirtualization
         ref={autocomplete}
@@ -223,7 +223,6 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
         options={coinlist}
         renderInput={(params): JSX.Element => (
           <TextField
-            {...params}
             error={coinsError && !coins.length}
             helperText={
               coinsError && !coins.length
@@ -234,6 +233,7 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
             label={"Coins"}
             name={"coins"}
             variant={"outlined"}
+            {...params}
           />
         )}
         renderOption={({CoinName}): ReactNode => (
@@ -259,7 +259,7 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
         <FormLabel component={"legend"}>Graph Type</FormLabel>
         <RadioGroup
           aria-label={"Graph Type"}
-          name={"graph-type"}
+          name={"graphtype"}
           value={graphType}
           row
           onChange={(event): void =>
@@ -268,13 +268,13 @@ const Index = ({coinlist}: IndexProps): JSX.Element => {
         >
           <FormControlLabel
             control={<Radio />}
-            label={"Bollinger Bands"}
-            value={"bollinger-bands"}
+            label={"Box Plot"}
+            value={"boxplot"}
           />
           <FormControlLabel
             control={<Radio />}
             label={"Line Chart"}
-            value={"line-chart"}
+            value={"linechart"}
           />
         </RadioGroup>
       </FormControl>
