@@ -4,12 +4,30 @@ import {useEffect, useState} from "react"
 
 import {useRouter} from "next/router"
 
+import Divider from "@material-ui/core/Divider"
+
+import {Theme, createStyles, makeStyles} from "@material-ui/core/styles"
+
 import unfetch from "isomorphic-unfetch"
 
 import moment, {Moment} from "moment"
 
 import ConfigurationInterface from "../src/components/ConfigurationInterface"
 import {Coin} from "../src/types/cryptocompare"
+
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    divider: {
+      marginTop: theme.spacing(3),
+      marginBottom: theme.spacing(3),
+      width: "100%",
+    },
+    graph: {
+      width: "100%",
+      flexGrow: 1,
+    },
+  }),
+)
 
 const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
 
@@ -82,6 +100,7 @@ export interface Config {
 }
 
 const Index = (): JSX.Element => {
+  const styles = useStyles()
   const router = useRouter()
   const [coinlist, setCoinlist] = useState<Coin[]>([])
   const [coinlistLoadingError, setCoinlistLoadingError] = useState(false)
@@ -102,11 +121,20 @@ const Index = (): JSX.Element => {
     }
   }, [coinlist, router.query])
   return (
-    <ConfigurationInterface
-      coinlist={coinlist}
-      coinlistLoadingError={coinlistLoadingError}
-      config={config}
-    />
+    <>
+      <ConfigurationInterface
+        coinlist={coinlist}
+        coinlistLoadingError={coinlistLoadingError}
+        config={config}
+        dense={!!config}
+      />
+      {config ? (
+        <>
+          <Divider className={styles.divider} />
+          <div className={styles.graph} />
+        </>
+      ) : undefined}
+    </>
   )
 }
 

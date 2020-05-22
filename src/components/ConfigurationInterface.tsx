@@ -31,15 +31,16 @@ import {Coin} from "../types/cryptocompare"
 
 import AutocompleteWithVirtualization from "./AutocompleteWithVirtualization"
 
-const useStyles = makeStyles((theme: Theme) =>
+const useStyles = makeStyles<Theme, boolean>((theme: Theme) =>
   createStyles({
     form: {
       alignItems: "center",
       display: "flex",
-      flexDirection: "column",
+      flexDirection: (dense): "column" | "row" => (!dense ? "column" : "row"),
       justifyContent: "center",
       "& > :not(:last-child)": {
-        marginBottom: theme.spacing(3),
+        marginBottom: (dense): number => (!dense ? theme.spacing(3) : 0),
+        marginRight: (dense): number => (dense ? theme.spacing(3) : 0),
       },
       "& > .MuiPickersDateRangePickerInput-rangeInputsContainer": {
         // 599.95 is intentionally hardcoded
@@ -94,14 +95,16 @@ interface ConfigurationInterfaceProps {
   coinlist: Coin[];
   coinlistLoadingError: boolean;
   config: Config;
+  dense: boolean;
 }
 
 const ConfigurationInterface = ({
   coinlist,
   coinlistLoadingError,
   config,
+  dense,
 }: ConfigurationInterfaceProps): JSX.Element => {
-  const styles = useStyles()
+  const styles = useStyles(dense)
   const [dateRange, setDateRange] = useState<DateRange>([
     config?.from || yesterday.clone().subtract(1, "month"),
     config?.to || yesterday,
@@ -147,16 +150,18 @@ const ConfigurationInterface = ({
     }
   }
   useEffect(() => {
-    setAutocompleteWidth(form.current, autocomplete.current)
-    window.addEventListener("resize", () =>
-      setAutocompleteWidth(form.current, autocomplete.current),
-    )
+    if (!dense) {
+      setAutocompleteWidth(form.current, autocomplete.current)
+      window.addEventListener("resize", () =>
+        setAutocompleteWidth(form.current, autocomplete.current),
+      )
+    }
     return (): void => {
       window.removeEventListener("resize", () =>
         setAutocompleteWidth(form.current, autocomplete.current),
       )
     }
-  }, [])
+  }, [dense])
   useEffect(() => {
     if (config) {
       setDateRange([config.from, config.to])
@@ -164,6 +169,7 @@ const ConfigurationInterface = ({
       setGraphType(config.graphType)
     }
   }, [config])
+  const size = dense ? "small" : "medium"
   return (
     <form ref={form} className={styles.form}>
       <DateRangePicker
@@ -197,6 +203,7 @@ const ConfigurationInterface = ({
               }
               id={"from"}
               name={"from"}
+              size={size}
               value={startValue}
               {...startProps}
             />
@@ -212,6 +219,7 @@ const ConfigurationInterface = ({
               }
               id={"to"}
               name={"to"}
+              size={size}
               value={endValue}
               {...endProps}
             />
@@ -226,6 +234,7 @@ const ConfigurationInterface = ({
       <AutocompleteWithVirtualization
         ref={autocomplete}
         filterOptions={filterOptions}
+        fullWidth={!dense}
         getOptionLabel={({CoinName}): string => CoinName}
         id={"coins"}
         loading={!coinlist.length}
@@ -246,6 +255,7 @@ const ConfigurationInterface = ({
             inputRef={autocompleteInput}
             label={"Coins"}
             name={"coins"}
+            size={size}
             variant={"outlined"}
             {...params}
           />
@@ -255,14 +265,18 @@ const ConfigurationInterface = ({
         )}
         renderTags={(tagValue, getTagProps): ReactNode =>
           tagValue.map(({Name}, index) => (
-            <Chip key={Name} label={Name} {...getTagProps({index})} />
+            <Chip
+              key={Name}
+              label={Name}
+              size={size}
+              {...getTagProps({index})}
+            />
           ))
         }
         value={coins}
         autoHighlight
         disableCloseOnSelect
         filterSelectedOptions
-        fullWidth
         multiple
         onChange={(_event, value): void => setCoins(value)}
         onClose={(_event, reason): void =>
@@ -270,7 +284,9 @@ const ConfigurationInterface = ({
         }
       />
       <FormControl component={"fieldset"}>
-        <FormLabel component={"legend"}>Graph Type</FormLabel>
+        {!dense ? (
+          <FormLabel component={"legend"}>Graph Type</FormLabel>
+        ) : undefined}
         <RadioGroup
           aria-label={"Graph Type"}
           name={"graphtype"}
@@ -281,18 +297,23 @@ const ConfigurationInterface = ({
           }
         >
           <FormControlLabel
-            control={<Radio />}
+            control={<Radio size={size} />}
             label={"Box Plot"}
             value={"boxplot"}
           />
           <FormControlLabel
-            control={<Radio />}
+            control={<Radio size={size} />}
             label={"Line Chart"}
             value={"linechart"}
           />
         </RadioGroup>
       </FormControl>
-      <Button color={"primary"} variant={"contained"} onClick={submitForm}>
+      <Button
+        color={"primary"}
+        size={size}
+        variant={"contained"}
+        onClick={submitForm}
+      >
         Go!
       </Button>
     </form>
