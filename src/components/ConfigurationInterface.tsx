@@ -2,15 +2,17 @@ import {ReactNode, useEffect, useRef, useState} from "react"
 
 import Router from "next/router"
 
+import Avatar from "@material-ui/core/Avatar"
 import Button from "@material-ui/core/Button"
-import Chip from "@material-ui/core/Chip"
 import FormControl from "@material-ui/core/FormControl"
 import FormControlLabel from "@material-ui/core/FormControlLabel"
 import FormLabel from "@material-ui/core/FormLabel"
+import InputAdornment from "@material-ui/core/InputAdornment"
+import ListItemAvatar from "@material-ui/core/ListItemAvatar"
+import ListItemText from "@material-ui/core/ListItemText"
 import Radio from "@material-ui/core/Radio"
 import RadioGroup from "@material-ui/core/RadioGroup"
 import TextField from "@material-ui/core/TextField"
-import Typography from "@material-ui/core/Typography"
 import {
   AutocompleteCloseReason,
   createFilterOptions,
@@ -69,6 +71,8 @@ const getDateRangeValidationErrorMessage = (
   }
 }
 
+const coinImageAssetPrefix = "https://cryptocompare.com"
+
 const filterOptions = createFilterOptions({
   stringify: ({Name, CoinName}) => `${Name} ${CoinName}`,
 })
@@ -113,7 +117,7 @@ const ConfigurationInterface = ({
     DateRangeValidationError
   >([null, null])
   const [dateRangeError, setDateRangeError] = useState([false, false])
-  const [coins, setCoins] = useState(config?.coins || [])
+  const [coin, setCoin] = useState<Coin | null>(config?.coin || null)
   const [coinsError, setCoinsError] = useState(false)
   const [graphType, setGraphType] = useState<GraphType>(
     config?.graphType || "boxplot",
@@ -128,11 +132,11 @@ const ConfigurationInterface = ({
     if (!dateRange[1] && !dateRangeValidationError[1]) {
       setDateRangeError((prevState) => [prevState[0], true])
     }
-    if (!coins.length) setCoinsError(true)
+    if (!coin) setCoinsError(true)
     if (
       dateRange.every((date) => date) &&
       dateRangeValidationError.every((error) => !error) &&
-      coins.length
+      coin
     ) {
       Router.push(
         {
@@ -141,7 +145,7 @@ const ConfigurationInterface = ({
             graphtype: graphType,
             from: dateRange[0].format(moment.HTML5_FMT.DATE),
             to: dateRange[1].format(moment.HTML5_FMT.DATE),
-            coin: coins.map(({Id}) => Id),
+            coin: coin.Id,
           },
         },
         undefined,
@@ -155,17 +159,23 @@ const ConfigurationInterface = ({
       window.addEventListener("resize", () =>
         setAutocompleteWidth(form.current, autocomplete.current),
       )
-    }
-    return (): void => {
+    } else {
       window.removeEventListener("resize", () =>
         setAutocompleteWidth(form.current, autocomplete.current),
       )
+    }
+    return (): void => {
+      if (!dense) {
+        window.removeEventListener("resize", () =>
+          setAutocompleteWidth(form.current, autocomplete.current),
+        )
+      }
     }
   }, [dense])
   useEffect(() => {
     if (config) {
       setDateRange([config.from, config.to])
-      setCoins(config.coins)
+      setCoin(config.coin)
       setGraphType(config.graphType)
     }
   }, [config])
@@ -246,9 +256,9 @@ const ConfigurationInterface = ({
         options={coinlist}
         renderInput={(params): JSX.Element => (
           <TextField
-            error={coinsError && !coins.length}
+            error={coinsError && !coin}
             helperText={
-              coinsError && !coins.length
+              coinsError && !coin
                 ? "You must select at least one coin."
                 : undefined
             }
@@ -258,27 +268,42 @@ const ConfigurationInterface = ({
             size={size}
             variant={"outlined"}
             {...params}
+            InputProps={{
+              ...params.InputProps,
+              startAdornment: coin ? (
+                <InputAdornment position={"start"}>
+                  <Avatar
+                    alt={coin.Name}
+                    src={coinImageAssetPrefix + coin.ImageUrl + "?width=40"}
+                    variant={"square"}
+                  />
+                </InputAdornment>
+              ) : undefined,
+            }}
           />
         )}
-        renderOption={({CoinName}): ReactNode => (
-          <Typography noWrap>{CoinName}</Typography>
-        )}
-        renderTags={(tagValue, getTagProps): ReactNode =>
-          tagValue.map(({Name}, index) => (
-            <Chip
-              key={Name}
-              label={Name}
-              size={size}
-              {...getTagProps({index})}
+        renderOption={({ImageUrl, CoinName, Name}): ReactNode => (
+          <>
+            <ListItemAvatar>
+              <Avatar
+                alt={Name}
+                src={coinImageAssetPrefix + ImageUrl + "?width=40"}
+                variant={"square"}
+              />
+            </ListItemAvatar>
+            <ListItemText
+              primary={CoinName}
+              primaryTypographyProps={{noWrap: true}}
+              secondary={Name}
+              secondaryTypographyProps={{noWrap: true}}
             />
-          ))
-        }
-        value={coins}
+          </>
+        )}
+        value={coin}
         autoHighlight
         disableCloseOnSelect
         filterSelectedOptions
-        multiple
-        onChange={(_event, value): void => setCoins(value)}
+        onChange={(_event, value): void => setCoin(value)}
         onClose={(_event, reason): void =>
           blurAutocompleteInput(autocompleteInput.current, reason)
         }

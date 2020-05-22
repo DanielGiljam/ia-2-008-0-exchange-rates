@@ -50,31 +50,26 @@ const fetchCoinlist = (): Promise<Coin[]> => {
 
 const yesterday = moment().subtract(1, "day")
 
-const arrayify = <T extends unknown>(arrayOrNotArray: T | T[]): T[] =>
-  Array.isArray(arrayOrNotArray) ? arrayOrNotArray : [arrayOrNotArray]
-
 const validateAndApplyQuery = async (
   query: ParsedUrlQuery,
   coinlist: Coin[],
 ): Promise<Config | undefined> => {
   const from = moment(query.from, moment.HTML5_FMT.DATE)
   const to = moment(query.to, moment.HTML5_FMT.DATE)
-  const coins = Array.isArray(query.coin)
-    ? coinlist.filter(({Id}) => query.coin.includes(Id))
-    : [coinlist.find(({Id}) => Id === query.coin)]
-  const graphType = arrayify(query.graphtype).find((graphType) =>
-    /boxplot|linechart/.test(graphType),
-  ) as GraphType | undefined
+  const coin = !Array.isArray(query.coin)
+    ? coinlist.find(({Id}) => Id === query.coin)
+    : undefined
+  const graphType =
+    !Array.isArray(query.graphtype) && /boxplot|linechart/.test(query.graphtype)
+      ? (query.graphtype as GraphType)
+      : undefined
   console.group("validating query")
   console.log("from.isValid():", from.isValid())
   console.log("to.isValid():", to.isValid())
   console.log("from.isBefore(to):", from.isBefore(to))
   console.log("from.isBefore(yesterday):", from.isBefore(yesterday))
   console.log("to.isBefore(yesterday):", to.isBefore(yesterday))
-  console.log(
-    "coins.length === arrayify(query.coin).length:",
-    coins.length === arrayify(query.coin).length,
-  )
+  console.log("coin:", !!coin)
   console.log("graphType:", !!graphType)
   console.groupEnd()
   if (
@@ -83,10 +78,10 @@ const validateAndApplyQuery = async (
     from.isBefore(to) &&
     from.isBefore(yesterday) &&
     to.isBefore(yesterday) &&
-    coins.length === arrayify(query.coin).length &&
+    coin &&
     graphType
   ) {
-    return {from, to, coins, graphType}
+    return {from, to, coin, graphType}
   }
 }
 
@@ -95,7 +90,7 @@ export type GraphType = "boxplot" | "linechart"
 export interface Config {
   from: Moment;
   to: Moment;
-  coins: Coin[];
+  coin: Coin;
   graphType: GraphType;
 }
 
