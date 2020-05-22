@@ -1,9 +1,13 @@
+import {UrlObject, format as urlFormat} from "url"
+
 import {ReactNode, useEffect, useRef, useState} from "react"
 
 import Router from "next/router"
 
 import Avatar from "@material-ui/core/Avatar"
 import Button from "@material-ui/core/Button"
+import ButtonGroup from "@material-ui/core/ButtonGroup"
+import Checkbox from "@material-ui/core/Checkbox"
 import FormControl from "@material-ui/core/FormControl"
 import FormControlLabel from "@material-ui/core/FormControlLabel"
 import FormLabel from "@material-ui/core/FormLabel"
@@ -13,6 +17,8 @@ import ListItemText from "@material-ui/core/ListItemText"
 import Radio from "@material-ui/core/Radio"
 import RadioGroup from "@material-ui/core/RadioGroup"
 import TextField from "@material-ui/core/TextField"
+import OpenInNewIcon from "@material-ui/icons/OpenInNewRounded"
+import RefreshIcon from "@material-ui/icons/RefreshRounded"
 import {
   AutocompleteCloseReason,
   createFilterOptions,
@@ -122,10 +128,11 @@ const ConfigurationInterface = ({
   const [graphType, setGraphType] = useState<GraphType>(
     config?.graphType || "boxplot",
   )
+  const [liveRefresh, setLiveRefresh] = useState(false)
   const form = useRef<HTMLFormElement>(null)
   const autocomplete = useRef<HTMLDivElement>(null)
   const autocompleteInput = useRef<HTMLInputElement>(null)
-  const submitForm = (): void => {
+  const submitForm = (blank?: boolean): void => {
     if (!dateRange[0] && !dateRangeValidationError[0]) {
       setDateRangeError((prevState) => [true, prevState[1]])
     }
@@ -138,21 +145,29 @@ const ConfigurationInterface = ({
       dateRangeValidationError.every((error) => !error) &&
       coin
     ) {
-      Router.push(
-        {
-          pathname: "/",
-          query: {
-            graphtype: graphType,
-            from: dateRange[0].format(moment.HTML5_FMT.DATE),
-            to: dateRange[1].format(moment.HTML5_FMT.DATE),
-            coin: coin.Id,
-          },
+      const urlObject: UrlObject = {
+        pathname: "/",
+        query: {
+          graphtype: graphType,
+          from: dateRange[0].format(moment.HTML5_FMT.DATE),
+          to: dateRange[1].format(moment.HTML5_FMT.DATE),
+          coin: coin.Id,
         },
-        undefined,
-        {shallow: true},
-      )
+      }
+      if (blank) {
+        window.open(urlFormat(urlObject), "_blank")
+      } else {
+        Router.push(urlObject, undefined, {shallow: liveRefresh})
+      }
     }
   }
+  useEffect(() => {
+    if (config && !liveRefresh) {
+      setDateRange([config.from, config.to])
+      setCoin(config.coin)
+      setGraphType(config.graphType)
+    }
+  }, [config, liveRefresh])
   useEffect(() => {
     if (!dense) {
       setAutocompleteWidth(form.current, autocomplete.current)
@@ -173,12 +188,8 @@ const ConfigurationInterface = ({
     }
   }, [dense])
   useEffect(() => {
-    if (config) {
-      setDateRange([config.from, config.to])
-      setCoin(config.coin)
-      setGraphType(config.graphType)
-    }
-  }, [config])
+    if (liveRefresh) submitForm()
+  }, [dateRange, coin, graphType, liveRefresh])
   const size = dense ? "small" : "medium"
   return (
     <form ref={form} className={styles.form}>
@@ -333,14 +344,41 @@ const ConfigurationInterface = ({
           />
         </RadioGroup>
       </FormControl>
-      <Button
-        color={"primary"}
-        size={size}
-        variant={"contained"}
-        onClick={submitForm}
-      >
-        Go!
-      </Button>
+      <FormControl component={"fieldset"}>
+        {dense ? (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={liveRefresh}
+                onChange={(event): void => setLiveRefresh(event.target.checked)}
+              />
+            }
+            label={"Live Refresh"}
+          />
+        ) : undefined}
+        <ButtonGroup
+          aria-label={dense ? "Deploy Changes" : "Render Graph"}
+          color={"primary"}
+          orientation={dense ? "vertical" : "horizontal"}
+          variant={"contained"}
+          disableElevation
+        >
+          <Button
+            aria-label={dense ? "Refresh" : "Render Graph"}
+            title={dense ? "Refresh" : "Render Graph"}
+            onClick={(): void => submitForm()}
+          >
+            {dense ? <RefreshIcon /> : "Render Graph"}
+          </Button>
+          <Button
+            aria-label={"Open In New Tab"}
+            title={"Open In New tab"}
+            onClick={(): void => submitForm(true)}
+          >
+            {dense ? <OpenInNewIcon /> : "In New tab"}
+          </Button>
+        </ButtonGroup>
+      </FormControl>
     </form>
   )
 }
