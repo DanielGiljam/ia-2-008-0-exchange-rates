@@ -4,6 +4,7 @@ import {useEffect, useState} from "react"
 
 import {useRouter} from "next/router"
 
+import CircularProgress from "@material-ui/core/CircularProgress"
 import Divider from "@material-ui/core/Divider"
 
 import {Theme, createStyles, makeStyles} from "@material-ui/core/styles"
@@ -97,21 +98,22 @@ export interface Config {
 const Index = (): JSX.Element => {
   const styles = useStyles()
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
   const [coinlist, setCoinlist] = useState<Coin[]>([])
-  const [coinlistLoadingError, setCoinlistLoadingError] = useState(false)
   const [config, setConfig] = useState<Config | undefined>()
   useEffect(() => {
     fetchCoinlist()
       .then(setCoinlist)
       .catch((error) => {
+        // TODO: display error message if coinlist fetch fails
         console.error(error)
-        setCoinlistLoadingError(true)
       })
   }, [])
   useEffect(() => {
     if (coinlist.length) {
       validateAndApplyQuery(router.query, coinlist).then((config) => {
         if (config) setConfig(config)
+        if (loading) setLoading(false)
       })
     }
   }, [coinlist, router.query])
@@ -119,11 +121,12 @@ const Index = (): JSX.Element => {
     <>
       <ConfigurationInterface
         coinlist={coinlist}
-        coinlistLoadingError={coinlistLoadingError}
         config={config}
-        dense={!!config}
+        loading={loading}
       />
-      {config ? (
+      {loading ? (
+        <CircularProgress disableShrink />
+      ) : config ? (
         <>
           <Divider className={styles.divider} />
           <div className={styles.graph} />

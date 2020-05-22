@@ -2,7 +2,6 @@ import {
   Children,
   ComponentType,
   HTMLAttributes,
-  MutableRefObject,
   ReactNode,
   cloneElement,
   createContext,
@@ -122,23 +121,19 @@ interface AutocompleteWithVirtualizationProps<T> {
   options: T[];
 }
 
-const AutocompleteWithVirtualization = forwardRef(
-  <T extends unknown>(
-    props: AutocompleteProps<T> & UseAutocompleteProps<T>,
-    ref: MutableRefObject<HTMLDivElement>,
-  ): JSX.Element => {
-    const classes = useStyles()
-    return (
-      <Autocomplete
-        ref={ref}
-        classes={classes}
-        ListboxComponent={
-          ListboxComponent as ComponentType<HTMLAttributes<HTMLElement>>
-        }
-        {...props}
-      />
-    )
-  },
-)
+const AutocompleteWithVirtualization = <T extends unknown>(
+  props: AutocompleteProps<T> & UseAutocompleteProps<T>,
+): JSX.Element => {
+  const classes = useStyles()
+  return (
+    <Autocomplete
+      {...props}
+      classes={classes}
+      ListboxComponent={
+        ListboxComponent as ComponentType<HTMLAttributes<HTMLElement>>
+      }
+    />
+  )
+}
 
 export default AutocompleteWithVirtualization

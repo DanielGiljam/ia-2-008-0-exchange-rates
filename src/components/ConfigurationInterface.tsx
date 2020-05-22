@@ -35,29 +35,37 @@ import {DateRangeValidationError} from "@material-ui/pickers/src/_helpers/date-u
 import moment from "moment"
 
 import {Config, GraphType} from "../../pages"
+import {
+  autocompleteWithVirtualizationTextFieldMaxWidth,
+  autocompleteWithVirtualizationTextFieldMinWidth,
+  dateRangePickerTextFieldWidth,
+} from "../theme/constants"
 import {Coin} from "../types/cryptocompare"
 
 import AutocompleteWithVirtualization from "./AutocompleteWithVirtualization"
 
-const useStyles = makeStyles<Theme, boolean>((theme: Theme) =>
-  createStyles({
-    form: {
-      alignItems: "center",
-      display: "flex",
-      flexDirection: (dense): "column" | "row" => (!dense ? "column" : "row"),
-      justifyContent: "center",
-      "& > :not(:last-child)": {
-        marginBottom: (dense): number => (!dense ? theme.spacing(3) : 0),
-        marginRight: (dense): number => (dense ? theme.spacing(3) : 0),
-      },
-      "& > .MuiPickersDateRangePickerInput-rangeInputsContainer": {
-        // 599.95 is intentionally hardcoded
-        [theme.breakpoints.down(599.95)]: {
-          flexDirection: "unset",
+const useStyles = makeStyles<Theme, ConfigurationInterfaceProps>(
+  (theme: Theme) =>
+    createStyles({
+      form: {
+        alignItems: ({config}): "center" | "flex-start" =>
+          !config ? "center" : "flex-start",
+        display: ({loading}): "flex" | "none" => (!loading ? "flex" : "none"),
+        flexDirection: ({config}): "column" | "row" =>
+          !config ? "column" : "row",
+        justifyContent: "center",
+        "& > :not(:last-child)": {
+          marginBottom: ({config}): number => (!config ? theme.spacing(3) : 0),
+          marginRight: ({config}): number => (config ? theme.spacing(3) : 0),
+        },
+        "& > .MuiPickersDateRangePickerInput-rangeInputsContainer": {
+          // 599.95 is intentionally hardcoded
+          [theme.breakpoints.down(599.95)]: {
+            flexDirection: "unset",
+          },
         },
       },
-    },
-  }),
+    }),
 )
 
 const yesterday = moment().subtract(1, "day")
@@ -83,15 +91,6 @@ const filterOptions = createFilterOptions({
   stringify: ({Name, CoinName}) => `${Name} ${CoinName}`,
 })
 
-const setAutocompleteWidth = (
-  wrapper: HTMLFormElement,
-  autocomplete: HTMLDivElement,
-): void => {
-  if (autocomplete) {
-    autocomplete.style.width = wrapper.getBoundingClientRect().width + "px"
-  }
-}
-
 const blurAutocompleteInput = (
   autocompleteInput: HTMLInputElement,
   reason: AutocompleteCloseReason,
@@ -102,19 +101,16 @@ const blurAutocompleteInput = (
 }
 
 interface ConfigurationInterfaceProps {
+  loading: boolean;
   coinlist: Coin[];
-  coinlistLoadingError: boolean;
   config: Config;
-  dense: boolean;
 }
 
-const ConfigurationInterface = ({
-  coinlist,
-  coinlistLoadingError,
-  config,
-  dense,
-}: ConfigurationInterfaceProps): JSX.Element => {
-  const styles = useStyles(dense)
+const ConfigurationInterface = (
+  props: ConfigurationInterfaceProps,
+): JSX.Element => {
+  const {coinlist, config} = props
+  const styles = useStyles(props)
   const [dateRange, setDateRange] = useState<DateRange>([
     config?.from || yesterday.clone().subtract(1, "month"),
     config?.to || yesterday,
@@ -129,8 +125,6 @@ const ConfigurationInterface = ({
     config?.graphType || "boxplot",
   )
   const [liveRefresh, setLiveRefresh] = useState(false)
-  const form = useRef<HTMLFormElement>(null)
-  const autocomplete = useRef<HTMLDivElement>(null)
   const autocompleteInput = useRef<HTMLInputElement>(null)
   const submitForm = (blank?: boolean): void => {
     if (!dateRange[0] && !dateRangeValidationError[0]) {
@@ -169,30 +163,11 @@ const ConfigurationInterface = ({
     }
   }, [config, liveRefresh])
   useEffect(() => {
-    if (!dense) {
-      setAutocompleteWidth(form.current, autocomplete.current)
-      window.addEventListener("resize", () =>
-        setAutocompleteWidth(form.current, autocomplete.current),
-      )
-    } else {
-      window.removeEventListener("resize", () =>
-        setAutocompleteWidth(form.current, autocomplete.current),
-      )
-    }
-    return (): void => {
-      if (!dense) {
-        window.removeEventListener("resize", () =>
-          setAutocompleteWidth(form.current, autocomplete.current),
-        )
-      }
-    }
-  }, [dense])
-  useEffect(() => {
     if (liveRefresh) submitForm()
   }, [dateRange, coin, graphType, liveRefresh])
-  const size = dense ? "small" : "medium"
+  const size = config ? "small" : "medium"
   return (
-    <form ref={form} className={styles.form}>
+    <form className={styles.form}>
       <DateRangePicker
         endText={"To"}
         inputFormat={moment.HTML5_FMT.DATE}
@@ -225,6 +200,7 @@ const ConfigurationInterface = ({
               id={"from"}
               name={"from"}
               size={size}
+              style={{maxWidth: dateRangePickerTextFieldWidth}}
               value={startValue}
               {...startProps}
             />
@@ -241,6 +217,7 @@ const ConfigurationInterface = ({
               id={"to"}
               name={"to"}
               size={size}
+              style={{maxWidth: dateRangePickerTextFieldWidth}}
               value={endValue}
               {...endProps}
             />
@@ -253,17 +230,10 @@ const ConfigurationInterface = ({
         onError={setDateRangeValidationError}
       />
       <AutocompleteWithVirtualization
-        ref={autocomplete}
         filterOptions={filterOptions}
-        fullWidth={!dense}
+        fullWidth={!config}
         getOptionLabel={({CoinName}): string => CoinName}
         id={"coins"}
-        loading={!coinlist.length}
-        loadingText={
-          coinlistLoadingError
-            ? "Encountered an error while trying to load the coinlist. See the console for more information."
-            : undefined
-        }
         options={coinlist}
         renderInput={(params): JSX.Element => (
           <TextField
@@ -276,7 +246,6 @@ const ConfigurationInterface = ({
             inputRef={autocompleteInput}
             label={"Coins"}
             name={"coins"}
-            size={size}
             variant={"outlined"}
             {...params}
             InputProps={{
@@ -310,6 +279,10 @@ const ConfigurationInterface = ({
             />
           </>
         )}
+        style={{
+          maxWidth: autocompleteWithVirtualizationTextFieldMaxWidth,
+          minWidth: autocompleteWithVirtualizationTextFieldMinWidth,
+        }}
         value={coin}
         autoHighlight
         disableCloseOnSelect
@@ -320,14 +293,12 @@ const ConfigurationInterface = ({
         }
       />
       <FormControl component={"fieldset"}>
-        {!dense ? (
-          <FormLabel component={"legend"}>Graph Type</FormLabel>
-        ) : undefined}
+        <FormLabel component={"legend"}>Graph Type</FormLabel>
         <RadioGroup
           aria-label={"Graph Type"}
           name={"graphtype"}
+          row={!config}
           value={graphType}
-          row
           onChange={(event): void =>
             setGraphType(event.target.value as GraphType)
           }
@@ -345,7 +316,29 @@ const ConfigurationInterface = ({
         </RadioGroup>
       </FormControl>
       <FormControl component={"fieldset"}>
-        {dense ? (
+        <ButtonGroup
+          aria-label={config ? "Deploy Changes" : "Render Graph"}
+          color={"primary"}
+          fullWidth={!!config}
+          variant={"contained"}
+          disableElevation
+        >
+          <Button
+            aria-label={config ? "Refresh" : "Render Graph"}
+            title={config ? "Refresh" : "Render Graph"}
+            onClick={(): void => submitForm()}
+          >
+            {config ? <RefreshIcon /> : "Render Graph"}
+          </Button>
+          <Button
+            aria-label={"Open In New Tab"}
+            title={"Open In New tab"}
+            onClick={(): void => submitForm(true)}
+          >
+            {config ? <OpenInNewIcon /> : "In New tab"}
+          </Button>
+        </ButtonGroup>
+        {config ? (
           <FormControlLabel
             control={
               <Checkbox
@@ -356,28 +349,6 @@ const ConfigurationInterface = ({
             label={"Live Refresh"}
           />
         ) : undefined}
-        <ButtonGroup
-          aria-label={dense ? "Deploy Changes" : "Render Graph"}
-          color={"primary"}
-          orientation={dense ? "vertical" : "horizontal"}
-          variant={"contained"}
-          disableElevation
-        >
-          <Button
-            aria-label={dense ? "Refresh" : "Render Graph"}
-            title={dense ? "Refresh" : "Render Graph"}
-            onClick={(): void => submitForm()}
-          >
-            {dense ? <RefreshIcon /> : "Render Graph"}
-          </Button>
-          <Button
-            aria-label={"Open In New Tab"}
-            title={"Open In New tab"}
-            onClick={(): void => submitForm(true)}
-          >
-            {dense ? <OpenInNewIcon /> : "In New tab"}
-          </Button>
-        </ButtonGroup>
       </FormControl>
     </form>
   )
