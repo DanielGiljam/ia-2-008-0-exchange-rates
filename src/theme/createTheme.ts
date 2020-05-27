@@ -63,9 +63,6 @@ const createTheme = (theme: Theme): Theme => {
       ...MuiAppBar,
     },
     MuiToolbar: {
-      root: {
-        justifyContent: "space-between",
-      },
       ...MuiToolbar,
     },
   }
