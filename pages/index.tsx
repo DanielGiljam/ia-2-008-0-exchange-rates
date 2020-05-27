@@ -4,6 +4,7 @@ import {useEffect, useState} from "react"
 
 import {useRouter} from "next/router"
 
+import {Typography} from "@material-ui/core"
 import CircularProgress from "@material-ui/core/CircularProgress"
 import Divider from "@material-ui/core/Divider"
 
@@ -29,6 +30,8 @@ const useStyles = makeStyles((theme: Theme) =>
     },
   }),
 )
+
+const errorMessage = "Encountered an error. See console for more information."
 
 const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
 
@@ -99,14 +102,15 @@ const Index = (): JSX.Element => {
   const styles = useStyles()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [coinlist, setCoinlist] = useState<Coin[]>([])
   const [config, setConfig] = useState<Config | undefined>()
   useEffect(() => {
     fetchCoinlist()
       .then(setCoinlist)
       .catch((error) => {
-        // TODO: display error message if coinlist fetch fails
         console.error(error)
+        setError(true)
       })
   }, [])
   useEffect(() => {
@@ -117,7 +121,9 @@ const Index = (): JSX.Element => {
       })
     }
   }, [coinlist, router.query])
-  return (
+  return error ? (
+    <Typography>{errorMessage}</Typography>
+  ) : (
     <>
       <ConfigurationInterface
         coinlist={coinlist}
