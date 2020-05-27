@@ -46,3 +46,16 @@ export interface Coin {
   BlockReward: number;
   BlockTime: number;
 }
+
+export interface Datum {
+  time: number;
+  top_tier_volume_quote: number; // eslint-disable-line camelcase
+  top_tier_volume_base: number; // eslint-disable-line camelcase
+  top_tier_volume_total: number; // eslint-disable-line camelcase
+  cccagg_volume_quote: number; // eslint-disable-line camelcase
+  cccagg_volume_base: number; // eslint-disable-line camelcase
+  cccagg_volume_total: number; // eslint-disable-line camelcase
+  total_volume_quote: number; // eslint-disable-line camelcase
+  total_volume_base: number; // eslint-disable-line camelcase
+  total_volume_total: number; // eslint-disable-line camelcase
+}

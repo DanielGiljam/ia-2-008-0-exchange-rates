@@ -1,6 +1,6 @@
 import {ParsedUrlQuery} from "querystring"
 
-import {useEffect, useState} from "react"
+import {useEffect, useRef, useState} from "react"
 
 import {useRouter} from "next/router"
 
@@ -14,8 +14,10 @@ import unfetch from "isomorphic-unfetch"
 
 import moment, {Moment} from "moment"
 
+import BoxPlot from "../src/components/BoxPlot"
 import ConfigurationInterface from "../src/components/ConfigurationInterface"
-import {Coin} from "../src/types/cryptocompare"
+import LineChart from "../src/components/LineChart"
+import {Coin, Datum} from "../src/types/cryptocompare"
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -25,18 +27,29 @@ const useStyles = makeStyles((theme: Theme) =>
       width: "100%",
     },
     graph: {
-      width: "100%",
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
       flexGrow: 1,
+      justifyContent: "center",
+      width: "100%",
     },
   }),
 )
 
 const errorMessage = "Encountered an error. See console for more information."
 
+const dailySymbolVolumeURL =
+  "https://min-api.cryptocompare.com/data/symbol/histoday"
 const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
 
-const fetchCoinlist = (): Promise<Coin[]> => {
-  return unfetch(coinlistURL)
+const tsym = "EUR"
+
+// According to https://min-api.cryptocompare.com/documentation?key=Historical&cat=dataSymbolHistoday 2020-05-26
+const maxLimit = 500
+
+const fetchCoinlist = (): Promise<Coin[]> =>
+  unfetch(coinlistURL)
     .then((req) => req.json())
     .then((data) =>
       Object.values(data.Data)
@@ -50,11 +63,43 @@ const fetchCoinlist = (): Promise<Coin[]> => {
           ),
         ),
     )
+
+const fetchDailySymbolVolume = async ({
+  from,
+  to,
+  coin,
+}: Config): Promise<Datum[]> => {
+  let limit = to.diff(from, "days")
+  const toTs = to.clone().add(1, "day")
+  const chunkParams: {limit: number; toTs: number}[] = []
+  while (limit > maxLimit) {
+    chunkParams.push({
+      limit: maxLimit,
+      toTs: toTs.unix(),
+    })
+    toTs.subtract(maxLimit, "days")
+    limit -= maxLimit
+  }
+  if (limit > 0) {
+    chunkParams.push({limit, toTs: toTs.unix()})
+  }
+  return Promise.all(
+    chunkParams.map(({limit, toTs}) =>
+      unfetch(
+        `${dailySymbolVolumeURL}?fsym=${coin.Name}&tsym=${tsym}&limit=${limit}&toTs=${toTs}`,
+      ).then((req) => req.json()),
+    ),
+  ).then((chunks) =>
+    chunks
+      .map((chunk) => chunk.Data)
+      .reverse()
+      .flat(),
+  )
 }
 
 const yesterday = moment().subtract(1, "day")
 
-const validateAndApplyQuery = async (
+const parseQuery = async (
   query: ParsedUrlQuery,
   coinlist: Coin[],
 ): Promise<Config | undefined> => {
@@ -105,6 +150,8 @@ const Index = (): JSX.Element => {
   const [error, setError] = useState(false)
   const [coinlist, setCoinlist] = useState<Coin[]>([])
   const [config, setConfig] = useState<Config | undefined>()
+  const [data, setData] = useState<Datum[]>([])
+  const graphContainer = useRef<HTMLDivElement>(null)
   useEffect(() => {
     fetchCoinlist()
       .then(setCoinlist)
@@ -115,12 +162,23 @@ const Index = (): JSX.Element => {
   }, [])
   useEffect(() => {
     if (coinlist.length) {
-      validateAndApplyQuery(router.query, coinlist).then((config) => {
-        if (config) setConfig(config)
+      parseQuery(router.query, coinlist).then((parsedConfig) => {
+        if (parsedConfig) setConfig(parsedConfig)
+        else if (config) setConfig(undefined)
         if (loading) setLoading(false)
       })
     }
   }, [coinlist, router.query])
+  useEffect(() => {
+    if (config) {
+      fetchDailySymbolVolume(config)
+        .then(setData)
+        .catch((error) => {
+          console.error(error)
+          setError(true)
+        })
+    }
+  }, [config])
   return error ? (
     <Typography>{errorMessage}</Typography>
   ) : (
@@ -130,12 +188,20 @@ const Index = (): JSX.Element => {
         config={config}
         loading={loading}
       />
-      {loading ? (
-        <CircularProgress disableShrink />
-      ) : config ? (
+      {config ? (
         <>
           <Divider className={styles.divider} />
-          <div className={styles.graph} />
+          <div ref={graphContainer} className={styles.graph}>
+            {data.length ? (
+              config.graphType === "boxplot" ? (
+                <BoxPlot container={graphContainer.current} data={data} />
+              ) : (
+                <LineChart container={graphContainer.current} data={data} />
+              )
+            ) : (
+              <CircularProgress disableShrink />
+            )}
+          </div>
         </>
       ) : undefined}
     </>

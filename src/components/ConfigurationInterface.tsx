@@ -70,6 +70,11 @@ const useStyles = makeStyles<Theme, ConfigurationInterfaceProps>(
 
 const yesterday = moment().subtract(1, "day")
 
+const getInitialDateRange = (config?: Config): DateRange => [
+  config?.from || yesterday.clone().subtract(1, "month"),
+  config?.to || yesterday,
+]
+
 const getDateRangeValidationErrorMessage = (
   dateRangeValidationErrorValue: DateRangeValidationError[number],
 ): string | undefined => {
@@ -111,10 +116,9 @@ const ConfigurationInterface = (
 ): JSX.Element => {
   const {coinlist, config} = props
   const styles = useStyles(props)
-  const [dateRange, setDateRange] = useState<DateRange>([
-    config?.from || yesterday.clone().subtract(1, "month"),
-    config?.to || yesterday,
-  ])
+  const [dateRange, setDateRange] = useState<DateRange>(
+    getInitialDateRange(config),
+  )
   const [dateRangeValidationError, setDateRangeValidationError] = useState<
     DateRangeValidationError
   >([null, null])
@@ -156,11 +160,12 @@ const ConfigurationInterface = (
     }
   }
   useEffect(() => {
-    if (config && !liveRefresh) {
-      setDateRange([config.from, config.to])
-      setCoin(config.coin)
-      setGraphType(config.graphType)
+    if (!liveRefresh) {
+      setDateRange(getInitialDateRange(config))
+      setCoin(config?.coin || null)
+      setGraphType(config?.graphType || "boxplot")
     }
+    if (liveRefresh && !config) setLiveRefresh(false)
   }, [config, liveRefresh])
   useEffect(() => {
     if (liveRefresh) submitForm()
