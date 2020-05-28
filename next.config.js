@@ -3,10 +3,6 @@
 
 const MomentLocalesPlugin = require("moment-locales-webpack-plugin")
 
-if (!process.env.API_KEY) {
-  throw new TypeError("process.env.API_KEY is not defined!")
-}
-
 module.exports = {
   webpack(config) {
     config.plugins.push(
