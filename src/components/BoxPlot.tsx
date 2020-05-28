@@ -1,6 +1,10 @@
 import {useEffect, useState} from "react"
 
+import green from "@material-ui/core/colors/green"
+import red from "@material-ui/core/colors/red"
+
 import * as d3 from "d3"
+import moment from "moment"
 
 import {GraphFunction, GraphProps} from "../types/util.d"
 
@@ -18,9 +22,6 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
 
         const boxPlot = d3.create("svg")
 
-        const min = d3.min(data, (datum) => datum.low)
-        const max = d3.max(data, (datum) => datum.high)
-
         const dataRefactored = data.map((entry) => {
           const points = [entry.low, entry.high, entry.open, entry.close]
           points.sort()
@@ -29,18 +30,40 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
           return points
         })
 
+        const xScale = d3
+          .scaleTime()
+          .domain([
+            d3.min(data, (datum) => moment.unix(datum.time).toDate()),
+            d3.max(data, (datum) => moment.unix(datum.time).toDate()),
+          ])
+          .range([0, width])
         const yScale = d3
           .scaleLinear()
-          .domain([min - 5, max + 5])
-          .range([0, width])
+          .domain([
+            d3.min(data, (datum) => datum.low),
+            d3.max(data, (datum) => datum.high),
+          ])
+          .range([height, 0])
+
+        const xAxis = d3.axisBottom(xScale)
         const yAxis = d3.axisLeft(yScale)
+
+        boxPlot
+          .append("g")
+          .attr("transform", `translate(${margins.left},${height})`)
+          .call(xAxis, data)
+        boxPlot
+          .append("g")
+          .attr("transform", `translate(${margins.left},0)`)
+          .call(yAxis, data)
 
         const chartGroup = boxPlot
           .append("g")
-          .attr("transform", "translate(0,0)")
+          .attr("transform", `translate(${margins.left},0)`)
 
         let xPosition = 15
 
+        let prevLq: number = dataRefactored[0][0]
         for (const [lq, boxStart, boxEnd, uq, median] of dataRefactored) {
           chartGroup
             .append("line")
@@ -57,7 +80,7 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
             .append("rect")
             .attr("width", 10)
             .attr("height", boxEnd - boxStart)
-            .attr("fill", "grey")
+            .attr("fill", lq <= prevLq ? green[700] : red[700])
             .attr("stroke", "black")
             .attr("x", xPosition - 5)
             .attr("y", yScale(boxStart))
@@ -95,6 +118,7 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
           console.log("This is uq:", uq)
           console.log("This is median:", median)
           xPosition += 15
+          prevLq = lq
         }
 
         return boxPlot.html()
