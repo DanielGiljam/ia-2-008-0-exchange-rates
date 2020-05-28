@@ -46,7 +46,7 @@ const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
 const tsym = "EUR"
 
 // According to https://min-api.cryptocompare.com/documentation?key=Historical&cat=dataSymbolHistoday 2020-05-26
-const maxLimit = 500
+const maxLimit = 2000
 
 const fetchCoinlist = (): Promise<Coin[]> =>
   unfetch(coinlistURL)

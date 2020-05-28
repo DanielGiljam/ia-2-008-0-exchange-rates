@@ -25,6 +25,7 @@
     "@material-ui/icons": "^4.9.1",
     "@material-ui/lab": "^4.0.0-alpha.53",
     "@material-ui/pickers": "^4.0.0-alpha.7",
+    "@types/d3": "^5.7.2",
     "@types/node": "^13.13.6",
     "@types/react": "^16.9.35",
     "@typescript-eslint/eslint-plugin": "^2.34.0",

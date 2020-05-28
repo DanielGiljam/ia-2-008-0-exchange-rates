@@ -1,50 +1,79 @@
-import {useEffect} from "react"
+import {useEffect, useState} from "react"
 
 import * as d3 from "d3"
+import moment from "moment"
 
-import {GraphProps} from "../types/util"
+import {Datum} from "../types/cryptocompare"
+import {GraphFunction, GraphProps} from "../types/util.d"
 
-const margins = {left: 32, bottom: 32}
+const margins = {left: 36, bottom: 28}
 
-const LineChart = ({data, container}: GraphProps): JSX.Element => {
+const LineChart = (props: GraphProps): JSX.Element => {
+  const [lineChartFunction, setLineChartFunction] = useState<GraphFunction>()
   useEffect(() => {
-    // TODO: optimize this
-    const containerRect = container.getBoundingClientRect()
-    const height = containerRect.height - margins.bottom
-    const width = containerRect.width - margins.left
-    const lineChart = d3
-      .create("svg")
-      .attr("width", "100%")
-      .attr("height", "100%")
-    const x = d3
-      .scaleLinear()
-      .domain([
-        d3.min(data, (datum) => datum.time),
-        d3.max(data, (datum) => datum.time),
-      ])
-      .range([0, width])
-    const y = d3
-      .scaleLinear()
-      .domain([
-        d3.min(data, (datum) => datum.total_volume_total),
-        d3.max(data, (datum) => datum.total_volume_total),
-      ])
-      .range([height, 0])
-    const line = d3
-      .line()
-      .x((datum) => x(datum.time))
-      .y((datum) => y(datum.total_volume_total))
-    lineChart
-      .append("g")
-      .attr("transform", `translate(${margins.left},0)`)
-      .append("path")
-      .attr("d", line(data))
-      .attr("fill", "none")
-      .attr("stroke", "black")
-    container.innerHTML = ""
-    container.appendChild(lineChart.node())
-  }, [data])
-  return null
+    if (!lineChartFunction) {
+      const lineChartFunction = ({data, container}: GraphProps): string => {
+        const containerRect = container.getBoundingClientRect()
+
+        const height = containerRect.height - margins.bottom
+        const width = containerRect.width - margins.left
+
+        const lineChart = d3.create("svg")
+
+        const xScale = d3
+          .scaleTime()
+          .domain([
+            d3.min(data, (datum) => moment.unix(datum.time).toDate()),
+            d3.max(data, (datum) => moment.unix(datum.time).toDate()),
+          ])
+          .range([0, width])
+        const yScale = d3
+          .scaleLinear()
+          .domain([
+            d3.min(data, (datum) => datum.close),
+            d3.max(data, (datum) => datum.close),
+          ])
+          .range([height, 0])
+
+        const xAxis = d3.axisBottom(xScale)
+        const yAxis = d3.axisLeft(yScale)
+
+        const line = d3
+          .line<Datum>()
+          .x((datum) => xScale(moment.unix(datum.time).toDate()))
+          .y((datum) => yScale(datum.close))
+
+        lineChart
+          .append("g")
+          .attr("transform", `translate(${margins.left},${height})`)
+          .call(xAxis, data)
+        lineChart
+          .append("g")
+          .attr("transform", `translate(${margins.left},0)`)
+          .call(yAxis, data)
+
+        lineChart
+          .append("g")
+          .append("path")
+          .attr("fill", "none")
+          .attr("stroke", "black")
+          .attr("transform", `translate(${margins.left},0)`)
+          .attr("d", line(data))
+
+        return lineChart.html()
+      }
+      setLineChartFunction(() => lineChartFunction)
+    }
+  }, [props])
+  return (
+    <svg
+      dangerouslySetInnerHTML={{
+        __html: lineChartFunction ? lineChartFunction(props) : "",
+      }}
+      height={"100%"}
+      width={"100%"}
+    />
+  )
 }
 
 export default LineChart
