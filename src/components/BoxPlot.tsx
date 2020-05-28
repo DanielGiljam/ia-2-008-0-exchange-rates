@@ -18,8 +18,8 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
 
         const boxPlot = d3.create("svg")
 
-        const min = d3.min(data, (datum) => datum.time)
-        const max = d3.max(data, (datum) => datum.time)
+        const min = d3.min(data, (datum) => datum.low)
+        const max = d3.max(data, (datum) => datum.high)
 
         const dataRefactored = data.map((entry) => {
           const points = [entry.low, entry.high, entry.open, entry.close]
@@ -29,11 +29,11 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
           return points
         })
 
-        const xScale = d3
+        const yScale = d3
           .scaleLinear()
           .domain([min - 5, max + 5])
           .range([0, width])
-        const xAxis = d3.axisBottom(xScale)
+        const yAxis = d3.axisLeft(yScale)
 
         const chartGroup = boxPlot
           .append("g")
@@ -48,9 +48,11 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
             .attr("stroke", "black")
             .attr("x1", xPosition)
             .attr("x2", xPosition)
-            .attr("y1", lq)
-            .attr("y2", uq)
+            .attr("y1", yScale(lq))
+            .attr("y2", yScale(uq))
 
+          // Boxen
+          // the box
           chartGroup
             .append("rect")
             .attr("width", 10)
@@ -58,32 +60,40 @@ const BoxPlot = (props: GraphProps): JSX.Element => {
             .attr("fill", "grey")
             .attr("stroke", "black")
             .attr("x", xPosition - 5)
-            .attr("y", boxStart)
+            .attr("y", yScale(boxStart))
 
+          // Rita en vertikal linje vid minsta
+          // Draws a verticle line at the lowest
           chartGroup
             .append("line")
             .attr("stroke", "black")
-            .attr("x1", lq)
-            .attr("x2", lq)
-            .attr("y1", xPosition - 5)
-            .attr("y2", xPosition + 5)
+            .attr("y1", yScale(lq))
+            .attr("y2", yScale(lq))
+            .attr("x1", xPosition - 5)
+            .attr("x2", xPosition + 5)
 
+          // Rita en vertikal linje vid högsta
+          // Draws a verticle line at the highest
           chartGroup
             .append("line")
             .attr("stroke", "black")
-            .attr("x1", uq)
-            .attr("x2", uq)
-            .attr("y1", xPosition - 5)
-            .attr("y2", xPosition + 5)
+            .attr("y1", yScale(uq))
+            .attr("y2", yScale(uq))
+            .attr("x1", xPosition - 5)
+            .attr("x2", xPosition + 5)
 
+          // Rita en vertikal linje vid medianen
+          // draws a verticle line in the median
           chartGroup
             .append("line")
             .attr("stroke", "black")
-            .attr("x1", median)
-            .attr("x2", median)
-            .attr("y1", xPosition - 5)
-            .attr("y2", xPosition + 5)
-
+            .attr("y1", yScale(median))
+            .attr("y2", yScale(median))
+            .attr("x1", xPosition - 5)
+            .attr("x2", xPosition + 5)
+          console.log("This is lq:", lq)
+          console.log("This is uq:", uq)
+          console.log("This is median:", median)
           xPosition += 15
         }
 
