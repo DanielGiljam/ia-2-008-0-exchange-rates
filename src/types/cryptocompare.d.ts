@@ -49,13 +49,12 @@ export interface Coin {
 
 export interface Datum {
   time: number;
-  top_tier_volume_quote: number; // eslint-disable-line camelcase
-  top_tier_volume_base: number; // eslint-disable-line camelcase
-  top_tier_volume_total: number; // eslint-disable-line camelcase
-  cccagg_volume_quote: number; // eslint-disable-line camelcase
-  cccagg_volume_base: number; // eslint-disable-line camelcase
-  cccagg_volume_total: number; // eslint-disable-line camelcase
-  total_volume_quote: number; // eslint-disable-line camelcase
-  total_volume_base: number; // eslint-disable-line camelcase
-  total_volume_total: number; // eslint-disable-line camelcase
+  high: number;
+  low: number;
+  open: number;
+  volumefrom: number;
+  volumeto: number;
+  close: number;
+  conversionType: string;
+  conversionSymbol: string;
 }

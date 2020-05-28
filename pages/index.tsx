@@ -40,7 +40,7 @@ const useStyles = makeStyles((theme: Theme) =>
 const errorMessage = "Encountered an error. See console for more information."
 
 const dailySymbolVolumeURL =
-  "https://min-api.cryptocompare.com/data/symbol/histoday"
+  "https://min-api.cryptocompare.com/data/v2/histohour"
 const coinlistURL = "https://min-api.cryptocompare.com/data/all/coinlist"
 
 const tsym = "EUR"
@@ -64,12 +64,12 @@ const fetchCoinlist = (): Promise<Coin[]> =>
         ),
     )
 
-const fetchDailySymbolVolume = async ({
+const fetchHourlyPairOHLCV = async ({
   from,
   to,
   coin,
 }: Config): Promise<Datum[]> => {
-  let limit = to.diff(from, "days")
+  let limit = to.diff(from, "hours")
   const toTs = to.clone().add(1, "day")
   const chunkParams: {limit: number; toTs: number}[] = []
   while (limit > maxLimit) {
@@ -91,7 +91,7 @@ const fetchDailySymbolVolume = async ({
     ),
   ).then((chunks) =>
     chunks
-      .map((chunk) => chunk.Data)
+      .map((chunk) => chunk.Data.Data)
       .reverse()
       .flat(),
   )
@@ -171,7 +171,7 @@ const Index = (): JSX.Element => {
   }, [coinlist, router.query])
   useEffect(() => {
     if (config) {
-      fetchDailySymbolVolume(config)
+      fetchHourlyPairOHLCV(config)
         .then(setData)
         .catch((error) => {
           console.error(error)
