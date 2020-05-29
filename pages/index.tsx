@@ -112,7 +112,7 @@ const parseQuery = async (
     !Array.isArray(query.graphtype) && /boxplot|linechart/.test(query.graphtype)
       ? (query.graphtype as GraphType)
       : undefined
-  console.group("validating query")
+  console.groupCollapsed("parseQuery")
   console.log("from.isValid():", from.isValid())
   console.log("to.isValid():", to.isValid())
   console.log("from.isBefore(to):", from.isBefore(to))
