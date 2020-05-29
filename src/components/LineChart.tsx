@@ -4,9 +4,11 @@ import * as d3 from "d3"
 import moment from "moment"
 
 import {Datum} from "../types/cryptocompare"
-import {GraphFunction, GraphProps} from "../types/util.d"
+import {GraphProps} from "../types/util.d"
 
 const margins = {left: 36, bottom: 28}
+
+type GraphFunction = (props: GraphProps) => string
 
 const LineChart = (props: GraphProps): JSX.Element => {
   const [lineChartFunction, setLineChartFunction] = useState<GraphFunction>()
